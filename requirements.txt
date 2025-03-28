@@ -20,7 +20,7 @@ langchain-community~=0.3.20
 langchain-ollama~=0.2.3
 langchain-qdrant~=0.2.0
 langgraph>0.2.27
-
+transformers
 pydantic~=2.11.0
 
 # --Other dependencies

@@ -81,31 +81,45 @@ def stateless_chat(llm: BaseChatModel):
 
 
 # Define the function that calls the model
-def call_model(state: State, llm: BaseChatModel):
+def call_model(state: State, llm: BaseChatModel, trimmer):
+    # You need to trim messages BEFORE the prompt template but AFTER you load previous messages from Message History.
+    trimmed_messages = trimmer.invoke(state["messages"])
+
     system_template = """
     In your response use language: {language}.
 
     """
     prompt_template = ChatPromptTemplate.from_messages(
-        [("system", system_template), MessagesPlaceholder(variable_name="messages")]
+        [
+            SystemMessage(content=system_template),
+            MessagesPlaceholder(variable_name="messages"),
+        ]
     )
 
-    prompt = prompt_template.invoke(state)
+    # prompt = prompt_template.invoke(state)
+    logger.info(f"language: {state['language']}")
+    prompt = prompt_template.invoke(
+        {"messages": trimmed_messages, "language": state["language"]}
+    )
     response = llm.invoke(prompt)
     return {"messages": response}
 
 
 # LangGraph implements a built-in persistence layer, making it ideal for chat applications that support multiple conversational turns.
-def langgraph_chat(llm: BaseChatModel) -> CompiledStateGraph:
+def langgraph_chat(llm: BaseChatModel, token_limit: int) -> CompiledStateGraph:
     # Wrapping our chat model in a minimal LangGraph application allows us
     # to automatically persist the message history, simplifying the development of multi-turn applications.
 
     # Define a new graph
     workflow = StateGraph(state_schema=State)
 
+    trimmer = build_message_trimmer(llm, token_limit)
+
     # Define the (single) node in the graph
     workflow.add_edge(start_key=START, end_key="model")
-    workflow.add_node(node="model", action=lambda state: call_model(state, llm))
+    workflow.add_node(
+        node="model", action=lambda state: call_model(state, llm, trimmer)
+    )
 
     # Add memory
     memory = MemorySaver()
@@ -113,8 +127,8 @@ def langgraph_chat(llm: BaseChatModel) -> CompiledStateGraph:
     return app
 
 
-def stateful_chat(llm: BaseChatModel):
-    app = langgraph_chat(llm)
+def stateful_chat(llm: BaseChatModel, token_limit: int):
+    app = langgraph_chat(llm, token_limit)
     chat_thread_id = str(uuid.uuid4())
     # We now need to create a config that we pass into the runnable every time.
     # This config contains information that is not part of the input directly, but is still useful.
@@ -126,20 +140,41 @@ def stateful_chat(llm: BaseChatModel):
     output = app.invoke(
         State(messages=[human_message_hi_im_bob], language="italian"), config
     )
-    for msg in output["messages"]:
-        msg.pretty_print()
+
     # Because of the threadId is the same I don't need to specify again the language I asked for to reply
     output = app.invoke(State(messages=[human_message_what_my_name]), config)
-    for msg in output["messages"]:
-        msg.pretty_print()
+
     output = app.invoke(
         State(
             messages=[HumanMessage(content="Which language I asked you to reply with?")]
         ),
         config,
     )
+    # Having set token limit for trimmer, it shouldn't remember the name provided in the first message
     for msg in output["messages"]:
         msg.pretty_print()
+
+
+def build_message_trimmer(llm: BaseChatModel, token_limit: int = 100):
+    # One important concept to understand when building chatbots is how to manage conversation history.
+    # If left unmanaged, the list of messages will grow unbounded and potentially overflow the context window of the LLM.
+    # Therefore, it is important to add a step that limits the size of the messages you are passing in.
+    #
+    # We can do this by adding a simple step in front of the prompt that modifies the messages key appropriately,
+    # and then wrap that new chain in the Message History class.
+    #
+    # The trimmer allows us to specify how many tokens we want to keep.
+    # Here we are using the trim_messages function to limit the number of tokens in the messages to 65.
+    # About the other parameters: we want to always keep the system message and do not allow partial messages
+    trimmer = trim_messages(
+        max_tokens=token_limit,
+        strategy="last",
+        token_counter=llm,
+        include_system=True,
+        allow_partial=False,
+        start_on="human",
+    )
+    return trimmer
 
 
 def main():
@@ -154,9 +189,7 @@ def main():
     stateless_chat(llm)
 
     logger.info("\n------STATEFUL CHAT-------")
-    stateful_chat(llm)
-
-    logger.info("\n------STATEFUL CHAT WITH HISTORY LIMIT-------")
+    stateful_chat(llm=llm, token_limit=10000)
 
 
 if __name__ == "__main__":
