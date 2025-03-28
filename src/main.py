@@ -48,7 +48,7 @@ def main():
     logger.info(f"Application started in {Config.APP_MODE} mode")
 
     # Initialize chat model
-    llm = init_chat_model(model=Config.LLM, model_provider="ollama")
+    llm = init_chat_model(model=Config.LLM, model_provider=Config.LLM_PROVIDER)
     stateless_chat(llm)
 
 
