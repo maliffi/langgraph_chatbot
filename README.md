@@ -1,29 +1,26 @@
-# LangChain Text Classification
+# LangGraph Chatbot
 
-This project demonstrates how to use LangChain to create a text classification system and has been developed starting from the LangChain Text Classification tutorial available [here](https://python.langchain.com/docs/tutorials/classification/).
-It leverages LangChain's structured output capabilities with Ollama models to classify text based on sentiment, aggressiveness level, and language identification.
+This project demonstrates how to build a stateful chatbot using LangGraph and LangChain. It showcases the differences between stateless and stateful chat interactions, highlighting the importance of maintaining conversation context.
 
 ## Project Overview
 
-This application uses LangChain and local LLMs through Ollama to perform multi-aspect text classification:
+This application uses LangGraph and LangChain with local LLMs through Ollama to create:
 
-1. **Sentiment Analysis**: Determines if text is positive, negative, or neutral
-2. **Aggressiveness Scoring**: Rates content on a scale from 1-10 for aggressiveness
-3. **Language Detection**: Identifies the language of the text
+1. **Stateless Chat**: Demonstrates the limitations of a chat without persistence
+2. **Stateful Chat**: Shows how LangGraph manages conversation state to maintain context
+3. **Multi-user Support**: Implements thread_id based conversations for multi-user applications
 
-The classification is implemented using LangChain's structured output capability with Pydantic models to ensure consistent and typed responses from language models.
+The chatbot leverages LangGraph's built-in persistence layer with MemorySaver to simplify the development of multi-turn conversations.
 
 ## Project Structure
 
 ```
-langchain_classification/
+langgraph_chatbot/
 ├── logs/               # Log files directory
 ├── src/                # Source code
 │   ├── __init__.py
 │   ├── main.py         # Application entry point
 │   ├── config.py       # Configuration settings
-│   ├── models/         # Pydantic model definitions
-│   │   └── classification.py  # Classification schema
 │   └── utils/          # Utility modules
 │       └── logger.py   # Logging configuration
 ├── .env                # Environment variables
@@ -41,8 +38,8 @@ This project relies on the following key dependencies:
 ### Core
 - **langchain**: Base framework for building language model applications
 - **langchain-core**: Core LangChain components
-- **langchain-ollama**: Integration with Ollama for local LLMs
-- **pydantic**: Data validation and settings management
+- **langgraph**: Graph-based framework for stateful LLM applications
+- **langchain_community**: Community extensions for LangChain
 
 ### Infrastructure
 - **python-dotenv**: Environment variable management
@@ -66,8 +63,8 @@ This project relies on the following key dependencies:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/maliffi/langchain_classification.git
-   cd langchain_classification
+   git clone https://github.com/maliffi/langgraph_chatbot.git
+   cd langgraph_chatbot
    ```
 
 2. Create a virtual environment:
@@ -100,29 +97,58 @@ To run the application, use the following command:
 python -m src.main
 ```
 
-
 The application will:
 1. Load the specified LLM via Ollama
-2. Process an example text
-3. Classify the text based on sentiment, aggressiveness, and language
+2. Demonstrate a stateless chat interaction
+3. Demonstrate a stateful chat with memory persistence
 4. Log the results
 
 #### Example Output
 Here's an example of the output you should see:
 
 ```
-2025-03-28 12:03:58 | INFO     | __main__:main:22 - Application started in development mode
-2025-03-28 12:03:59 | INFO     | __main__:main:42 - Input to classify: Sono incredibilmente contento di averti conosciuto! Sono sicuro diventeremo buoni amici!
-2025-03-28 12:03:59 | INFO     | __main__:main:43 - Response: Sentiment: positive, Aggressiveness: 1, Language: Italian
+2025-03-28 15:59:38 | INFO     | __main__:main:76 - Application started in development mode
+2025-03-28 15:59:38 | INFO     | __main__:main:80 -
+------STATELESS CHAT-------
+================================ Human Message =================================
+
+Hi! I'm Bob
+================================== Ai Message ==================================
+
+Hi Bob! It's nice to meet you. Is there something I can help you with or would you like to chat?
+================================ Human Message =================================
+
+What's my name?
+================================== Ai Message ==================================
+
+I don't have any information about you, so I'm not sure what your name is. We just started our conversation, and I don't have any prior knowledge about you. Would you like to tell me your name?
+2025-03-28 15:59:40 | INFO     | __main__:stateless_chat:37 -
+----------------------
+
+================================ Human Message =================================
+
+Hi! I'm Bob
+================================== Ai Message ==================================
+
+Hi Bob! It's nice to meet you. Is there something I can help you with or would you like to chat?
+================================ Human Message =================================
+
+What's my name?
+================================== Ai Message ==================================
+
+You told me your name earlier - Bob! You said "Hi, I'm Bob".
+2025-03-28 15:59:40 | INFO     | __main__:main:83 -
+------LANGGRAPH CHAT-------
+================================ Human Message =================================
+
+Hi! I'm Bob
+================================== Ai Message ==================================
 ```
 
-In this example, the Italian text "Sono incredibilmente contento di averti conosciuto! Sono sicuro diventeremo buoni amici!" (which means "I'm incredibly happy to have met you! I'm sure we'll become good friends!") is classified as:
-
-- **Sentiment**: positive
-- **Aggressiveness**: 1 (very low)
-- **Language**: Italian
-
-You can modify the input text in `src/main.py` to test different classifications.
+In this example, you can see the difference between:
+- **Stateless Chat**: When asked "What's my name?", the model initially doesn't remember the previous context
+- **Stateful Chat with Context**: When the entire conversation history is passed to the model, it can correctly identify the name
+- **LangGraph Chat**: Using LangGraph's persistence layer, the model automatically maintains conversation context
 
 ## Development
 
