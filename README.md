@@ -106,7 +106,7 @@ The application will:
 #### Example Output
 Here's an example of the output you should see:
 
-```
+```shell
 2025-03-28 15:59:38 | INFO     | __main__:main:76 - Application started in development mode
 2025-03-28 15:59:38 | INFO     | __main__:main:80 -
 ------STATELESS CHAT-------
@@ -138,7 +138,7 @@ What's my name?
 
 You told me your name earlier - Bob! You said "Hi, I'm Bob".
 2025-03-28 15:59:40 | INFO     | __main__:main:83 -
-------LANGGRAPH CHAT-------
+------STATEFUL CHAT-------
 ================================ Human Message =================================
 
 Hi! I'm Bob
